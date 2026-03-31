@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #E85D04;
+  --primary-dark: #C44D03;
+  --bg: #F7F5F0;
+  --card: #FFFFFF;
+  --dark: #1A1A1A;
+  --muted: #6B7280;
+  --border: #E5E1D8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--dark);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Leaflet overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 16px !important;
+  padding: 0 !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+  border: none !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 270px !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F7F5F0; }
+::-webkit-scrollbar-thumb { background: #D1CBC0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #B5AEA5; }
+
+/* Deal card hover */
+.deal-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.deal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(232, 93, 4, 0.12);
+}
+
+/* Quality score ring */
+.quality-ring {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+/* Animated live dot */
+.live-dot {
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}

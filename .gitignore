@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing
+coverage/
+.pytest_cache/
+htmlcov/
+
+# ML models (large files — store in cloud storage)
+backend/app/ml/models/*.joblib
+backend/app/ml/models/*.pkl
+
+# Playwright
+backend/playwright/.auth/
+
+# Telethon session files
+*.session
+*.session-journal
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
