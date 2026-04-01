@@ -1,10 +1,12 @@
 'use client';
 import Image from 'next/image';
-import { MapPin, Clock, Star, ExternalLink, BadgeCheck } from 'lucide-react';
+import { MapPin, Clock, Star, BadgeCheck, Heart } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
 import { Deal, CATEGORY_META } from '@/types';
 import { trackDealClick } from '@/lib/api';
+import { useAuthStore } from '@/store/useAuthStore';
+import SourceBadge from './SourceBadge';
 
 interface Props {
   deal: Deal;
@@ -14,6 +16,8 @@ interface Props {
 
 export default function DealCard({ deal, onClick, compact = false }: Props) {
   const meta = CATEGORY_META[deal.category] || CATEGORY_META.other;
+  const { user, bookmarks, toggleBookmark, signInWithGoogle } = useAuthStore();
+  const isBookmarked = bookmarks.includes(deal.id);
   const isExpiringSoon =
     deal.expires_at &&
     new Date(deal.expires_at).getTime() - Date.now() < 1000 * 60 * 60 * 24 * 3;
@@ -22,6 +26,12 @@ export default function DealCard({ deal, onClick, compact = false }: Props) {
   const handleClick = () => {
     trackDealClick(deal.id);
     onClick?.(deal);
+  };
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { signInWithGoogle(); return; }
+    toggleBookmark(deal.id);
   };
 
   return (
@@ -53,18 +63,26 @@ export default function DealCard({ deal, onClick, compact = false }: Props) {
           </div>
         )}
 
-        {/* Discount badge */}
         {!compact && deal.discount_text && (
           <div className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
             {deal.discount_text}
           </div>
         )}
 
-        {/* Student badge */}
         {!compact && deal.deal_type === 'student' && (
-          <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+          <div className="absolute top-3 right-10 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
             Student
           </div>
+        )}
+
+        {/* Bookmark button */}
+        {!compact && (
+          <button
+            onClick={handleBookmark}
+            className="absolute top-3 right-3 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+          >
+            <Heart className={clsx('w-3.5 h-3.5', isBookmarked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+          </button>
         )}
       </div>
 
@@ -127,7 +145,6 @@ export default function DealCard({ deal, onClick, compact = false }: Props) {
             </span>
           )}
 
-          {/* Quality score */}
           {!compact && (
             <span className="flex items-center gap-1 ml-auto">
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -136,17 +153,15 @@ export default function DealCard({ deal, onClick, compact = false }: Props) {
           )}
         </div>
 
-        {/* Source link (not compact) */}
-        {!compact && deal.source_url && (
-          <a
-            href={deal.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="mt-3 flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-          >
-            View deal <ExternalLink className="w-3 h-3" />
-          </a>
+        {/* Source */}
+        {!compact && (
+          <div className="mt-3 pt-3 border-t border-brand-border">
+            <SourceBadge
+              source_type={deal.source_type}
+              source_name={deal.source_name}
+              source_url={deal.source_url}
+            />
+          </div>
         )}
       </div>
     </div>

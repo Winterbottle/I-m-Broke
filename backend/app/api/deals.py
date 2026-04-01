@@ -12,13 +12,14 @@ async def list_deals(
     category: Optional[DealCategory] = None,
     deal_type: Optional[DealType] = None,
     active_only: bool = False,
+    today_only: bool = False,
     min_quality: int = Query(0, ge=0, le=100),
     sort_by: SortBy = "quality",
     limit: int = Query(50, le=200),
     offset: int = 0,
 ):
+    from datetime import datetime, timezone, timedelta
     sb = get_supabase()
-    # Use a view that already does ST_X/ST_Y extraction
     q = sb.table("deals_view").select("*")
 
     if category:
@@ -29,12 +30,16 @@ async def list_deals(
         q = q.eq("is_active", True)
     if min_quality:
         q = q.gte("quality_score", min_quality)
+    if today_only:
+        # SGT is UTC+8
+        sgt_now = datetime.now(timezone.utc) + timedelta(hours=8)
+        today_start = sgt_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=8)
+        q = q.gte("created_at", today_start.isoformat())
 
     if sort_by == "quality":
         q = q.order("quality_score", desc=True)
     elif sort_by == "recency":
         q = q.order("created_at", desc=True)
-    # distance sort requires user coords — handled by /nearby
 
     q = q.range(offset, offset + limit - 1)
     result = q.execute()

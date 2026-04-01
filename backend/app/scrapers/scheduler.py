@@ -38,15 +38,15 @@ def job_instagram():
     _run_async(run_instagram_scraper())
 
 
-def job_deactivate_expired():
-    """Mark expired deals as inactive."""
+def job_delete_expired():
+    """Hard delete expired deals (cascades to bookmarks)."""
     from app.db.client import get_supabase
     from datetime import datetime, timezone
     sb = get_supabase()
-    sb.table("deals").update({"is_active": False}).lt(
+    sb.table("deals").delete().lt(
         "expires_at", datetime.now(timezone.utc).isoformat()
-    ).execute()
-    logger.info("[scheduler] deactivated expired deals")
+    ).not_.is_("expires_at", "null").execute()
+    logger.info("[scheduler] deleted expired deals")
 
 
 def start_scheduler():
@@ -56,20 +56,13 @@ def start_scheduler():
 
     _scheduler = BackgroundScheduler(timezone="Asia/Singapore")
 
-    # Telegram: every 2 hours
     _scheduler.add_job(job_telegram, CronTrigger(hour="*/2"), id="telegram", replace_existing=True)
-
-    # Web: every 4 hours
     _scheduler.add_job(job_web, CronTrigger(hour="*/4"), id="web", replace_existing=True)
-
-    # Instagram: every 3 hours
     _scheduler.add_job(job_instagram, CronTrigger(hour="*/3"), id="instagram", replace_existing=True)
-
-    # Deactivate expired: every hour
-    _scheduler.add_job(job_deactivate_expired, CronTrigger(minute=0), id="expire", replace_existing=True)
+    _scheduler.add_job(job_delete_expired, CronTrigger(minute=0), id="delete_expired", replace_existing=True)
 
     _scheduler.start()
-    logger.info("[scheduler] started — Telegram(2h), Web(4h), Instagram(3h), Expire(1h)")
+    logger.info("[scheduler] started — Telegram(2h), Web(4h), Instagram(3h), DeleteExpired(1h)")
 
 
 def stop_scheduler():

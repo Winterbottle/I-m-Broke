@@ -21,9 +21,25 @@ export async function getDeals(filters?: Partial<SearchFilters>): Promise<Deal[]
   if (filters?.category) params.set('category', filters.category);
   if (filters?.deal_type) params.set('deal_type', filters.deal_type);
   if (filters?.active_only) params.set('active_only', 'true');
+  if (filters?.today_only) params.set('today_only', 'true');
   if (filters?.min_quality) params.set('min_quality', String(filters.min_quality));
   if (filters?.sort_by) params.set('sort_by', filters.sort_by);
   return fetchAPI<Deal[]>(`/api/v1/deals?${params}`);
+}
+
+export async function getUserBookmarks(userId: string): Promise<string[]> {
+  const { supabase } = await import('./supabase');
+  const { data } = await supabase.from('user_bookmarks').select('deal_id').eq('user_id', userId);
+  return (data || []).map((r: { deal_id: string }) => r.deal_id);
+}
+
+export async function toggleBookmark(dealId: string, userId: string, isBookmarked: boolean): Promise<void> {
+  const { supabase } = await import('./supabase');
+  if (isBookmarked) {
+    await supabase.from('user_bookmarks').delete().match({ user_id: userId, deal_id: dealId });
+  } else {
+    await supabase.from('user_bookmarks').insert({ user_id: userId, deal_id: dealId });
+  }
 }
 
 export async function getDealById(id: string): Promise<Deal> {

@@ -4,7 +4,9 @@
       "Bash(git fetch:*)",
       "Bash(git checkout:*)",
       "Bash(curl -s https://i-m-broke.onrender.com/api/v1/deals)",
-      "Bash(curl -s https://i-m-broke.onrender.com/api/v1/stats)"
+      "Bash(curl -s https://i-m-broke.onrender.com/api/v1/stats)",
+      "Bash(curl -s -X POST https://i-m-broke.onrender.com/api/v1/admin/scrape/web -H \"x-admin-key: imbroke123\")",
+      "Bash(curl -s https://i-m-broke.onrender.com/health)"
     ]
   }
 }

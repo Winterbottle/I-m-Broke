@@ -33,6 +33,9 @@ joblib==1.4.2
 # Scheduling
 apscheduler==3.10.4
 
+# Auth
+PyJWT==2.9.0
+
 # Utils
 python-dotenv==1.0.1
 python-dateutil==2.9.0.post0

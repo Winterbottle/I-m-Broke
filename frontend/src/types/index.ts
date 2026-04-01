@@ -32,6 +32,7 @@ export interface Deal {
   image_url?: string;
   source_url?: string;
   source_type: SourceType;
+  source_name?: string;
   expires_at?: string;
   is_active: boolean;
   quality_score: number; // 0–100
@@ -41,6 +42,19 @@ export interface Deal {
   distance_km?: number; // populated when queried near a point
   created_at: string;
   updated_at: string;
+}
+
+export interface SearchFilters {
+  query: string;
+  category?: DealCategory;
+  deal_type?: DealType;
+  active_only: boolean;
+  today_only?: boolean;
+  lat?: number;
+  lng?: number;
+  radius_km?: number;
+  min_quality?: number;
+  sort_by?: 'distance' | 'quality' | 'recency';
 }
 
 export interface Event {
@@ -61,17 +75,7 @@ export interface Event {
   created_at: string;
 }
 
-export interface SearchFilters {
-  query: string;
-  category?: DealCategory;
-  deal_type?: DealType;
-  active_only: boolean;
-  lat?: number;
-  lng?: number;
-  radius_km?: number;
-  min_quality?: number;
-  sort_by?: 'distance' | 'quality' | 'recency';
-}
+
 
 export interface PlatformStats {
   total_deals: number;
