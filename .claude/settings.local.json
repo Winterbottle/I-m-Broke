@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git fetch:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(curl -s https://i-m-broke.onrender.com/api/v1/deals)",
+      "Bash(curl -s https://i-m-broke.onrender.com/api/v1/stats)"
     ]
   }
 }
