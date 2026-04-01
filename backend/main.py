@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.api import deals, events, search, submit
+from app.api import deals, events, search, submit, admin
 
 app = FastAPI(
     title="I'm Broke API",
@@ -29,6 +29,7 @@ app.include_router(deals.router, prefix=PREFIX)
 app.include_router(events.router, prefix=PREFIX)
 app.include_router(search.router, prefix=PREFIX)
 app.include_router(submit.router, prefix=PREFIX)
+app.include_router(admin.router, prefix=PREFIX)
 
 
 @app.get(f"{PREFIX}/stats")

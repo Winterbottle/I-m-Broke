@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Bell, Tag } from 'lucide-react';
+import { Menu, X, Tag } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV_LINKS = [
@@ -19,13 +19,13 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-              <Tag className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+              <Tag className="w-4 h-4 text-white" />
             </div>
-            <span className="font-black text-xl tracking-tight">
+            <span className="font-black text-lg tracking-tight">
               I&apos;m <span className="text-primary">Broke</span>
             </span>
           </Link>
@@ -48,23 +48,6 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Actions */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/signin"
-              className="px-4 py-2 text-sm font-semibold rounded-full border border-brand-border hover:border-primary hover:text-primary transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/alerts"
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-full transition-colors shadow-sm"
-            >
-              <Bell className="w-4 h-4" />
-              Get Alerts
-            </Link>
-          </div>
-
           {/* Mobile menu toggle */}
           <button
             onClick={() => setOpen(!open)}
@@ -78,7 +61,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-brand-border bg-white px-4 py-4 space-y-1 animate-fade-in">
+        <div className="md:hidden border-t border-brand-border bg-white px-4 py-3 space-y-1 animate-fade-in">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -94,15 +77,6 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <div className="pt-3 flex flex-col gap-2">
-            <Link href="/signin" onClick={() => setOpen(false)} className="text-center px-4 py-2.5 rounded-full border border-brand-border text-sm font-semibold">
-              Sign In
-            </Link>
-            <Link href="/alerts" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-semibold rounded-full">
-              <Bell className="w-4 h-4" />
-              Get Alerts
-            </Link>
-          </div>
         </div>
       )}
     </header>
