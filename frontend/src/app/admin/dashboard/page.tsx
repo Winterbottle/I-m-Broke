@@ -40,7 +40,12 @@ export default function AdminDashboardPage() {
       method: 'POST',
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
-    setScrapeMsg(res.ok ? 'Scraper started! Check back in a minute.' : 'Failed to start scraper.');
+    if (res.ok) {
+      setScrapeMsg('Scraper started! Check back in a minute.');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setScrapeMsg(`Failed: ${err.detail || res.status}`);
+    }
     setScraping(false);
   };
 
