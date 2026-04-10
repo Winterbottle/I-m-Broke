@@ -148,14 +148,6 @@ def _upsert_deals(deals: list[dict]):
             "is_active": True,
         }
 
-        # Geocode address if available
-        if deal.get("address"):
-            coords = _geocode(deal["address"])
-            if coords:
-                from sqlalchemy import text
-                # Use PostGIS ST_MakePoint via raw SQL through supabase rpc
-                payload["lat_lng"] = f"POINT({coords[1]} {coords[0]})"
-
         sb.table("deals").insert(payload).execute()
 
 
