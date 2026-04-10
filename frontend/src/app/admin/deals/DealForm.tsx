@@ -27,7 +27,7 @@ export default function DealForm({ initial, dealId }: DealFormProps) {
     source_name: initial?.source_name || '',
     image_url: initial?.image_url || '',
     expires_at: initial?.expires_at?.split('T')[0] || '',
-    quality_score: initial?.quality_score || 70,
+    quality_score: 70,
     is_active: initial?.is_active ?? true,
   });
   const [loading, setLoading] = useState(false);
@@ -129,28 +129,15 @@ export default function DealForm({ initial, dealId }: DealFormProps) {
         {field('Expires At', 'expires_at', 'date')}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div>
-          <label className="block text-sm font-medium mb-1">Quality Score (0–100)</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={form.quality_score}
-            onChange={(e) => set('quality_score', Number(e.target.value))}
-            className="w-full border border-brand-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-        </div>
-        <div className="flex items-center gap-3 mt-6">
-          <input
-            type="checkbox"
-            id="is_active"
-            checked={form.is_active}
-            onChange={(e) => set('is_active', e.target.checked)}
-            className="w-4 h-4 accent-primary"
-          />
-          <label htmlFor="is_active" className="text-sm font-medium">Active (visible on site)</label>
-        </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          id="is_active"
+          checked={form.is_active}
+          onChange={(e) => set('is_active', e.target.checked)}
+          className="w-4 h-4 accent-primary"
+        />
+        <label htmlFor="is_active" className="text-sm font-medium">Active (visible on site)</label>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
