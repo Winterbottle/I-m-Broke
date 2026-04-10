@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from telethon import TelegramClient
+from telethon.sessions import StringSession
 from telethon.tl.types import Message
 
 from app.ml.ner_pipeline import extract_deal_info
@@ -104,17 +105,13 @@ async def run_telegram_scraper():
         return
 
     client = TelegramClient(
-        "im_broke_bot",
+        StringSession(session),
         int(api_id),
         api_hash,
         flood_sleep_threshold=60,
     )
 
     async with client:
-        if session:
-            # Use pre-generated session string (safer for server deployment)
-            pass
-
         all_deals = []
         for channel in PUBLIC_SG_CHANNELS:
             channel_deals = await scrape_channel(client, channel)
