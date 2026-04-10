@@ -10,11 +10,12 @@ import os
 import re
 import asyncio
 import logging
+import requests
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-from telethon.tl.types import Message, MessageMediaPhoto
+from telethon.tl.types import Message
 
 from app.ml.ner_pipeline import extract_deal_info
 from app.ml.classifier import is_spam
@@ -51,6 +52,22 @@ def _classify_source(url: str) -> str:
     if "t.me" in url or "telegram" in url:
         return "telegram"
     return "web"
+
+def _fetch_og_image(url: str) -> Optional[str]:
+    """Fetch the og:image from a URL."""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; ImBrokeSG/1.0)"}
+        res = requests.get(url, timeout=8, headers=headers, allow_redirects=True)
+        if res.status_code != 200:
+            return None
+        # Simple regex to find og:image without full HTML parser
+        match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](https?://[^"\']+)["\']', res.text)
+        if not match:
+            match = re.search(r'<meta[^>]+content=["\'](https?://[^"\']+)["\'][^>]+property=["\']og:image["\']', res.text)
+        return match.group(1) if match else None
+    except Exception:
+        return None
+
 
 def _extract_source_url(text: str) -> Optional[str]:
     """Extract the first non-Telegram URL from message text."""
@@ -104,26 +121,10 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             source_url = original_url or f"https://t.me/{channel}/{msg.id}"
             source_type = _classify_source(original_url) if original_url else "web"
 
-            # Download photo if attached
+            # Fetch og:image from original source URL
             image_url = None
-            if isinstance(msg.media, MessageMediaPhoto):
-                try:
-                    import io, base64
-                    buf = io.BytesIO()
-                    await client.download_media(msg.media, file=buf)
-                    buf.seek(0)
-                    # Upload to Supabase Storage
-                    sb = get_supabase()
-                    file_name = f"telegram/{channel}_{msg.id}.jpg"
-                    sb.storage.from_("deal-images").upload(
-                        file_name,
-                        buf.read(),
-                        {"content-type": "image/jpeg", "upsert": "true"},
-                    )
-                    supabase_url = os.getenv("SUPABASE_URL", "")
-                    image_url = f"{supabase_url}/storage/v1/object/public/deal-images/{file_name}"
-                except Exception as img_err:
-                    logger.debug(f"Image upload failed for {channel}/{msg.id}: {img_err}")
+            if original_url:
+                image_url = _fetch_og_image(original_url)
 
             deals.append({
                 **info,
