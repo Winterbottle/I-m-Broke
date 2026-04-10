@@ -24,12 +24,11 @@ logger = logging.getLogger(__name__)
 
 # Public SG deal/promo Telegram channels (all publicly visible)
 PUBLIC_SG_CHANNELS = [
-    "mothershipsg",
     "goodlobang",
     "tastesoulsg",
-    "studentperkssg",
     "good2gosg",
-    "studentdiscountssg",
+    "ThisCounted",
+    "mothershipsg",
 ]
 
 # Keywords that indicate a deal
