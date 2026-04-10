@@ -13,6 +13,8 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeMsg, setScrapeMsg] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -29,9 +31,32 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, []);
 
+  const runScraper = async () => {
+    setScraping(true);
+    setScrapeMsg('');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setScrapeMsg('Not authenticated'); setScraping(false); return; }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/scrape/telegram`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    setScrapeMsg(res.ok ? 'Scraper started! Check back in a minute.' : 'Failed to start scraper.');
+    setScraping(false);
+  };
+
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <button
+          onClick={runScraper}
+          disabled={scraping}
+          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark disabled:opacity-60"
+        >
+          {scraping ? 'Running...' : 'Run Telegram Scraper'}
+        </button>
+      </div>
+      {scrapeMsg && <p className="text-sm text-green-600 mb-4">{scrapeMsg}</p>}
 
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
