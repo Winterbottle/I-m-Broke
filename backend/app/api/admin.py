@@ -32,25 +32,22 @@ def _verify_admin(credentials: Optional[HTTPAuthorizationCredentials]) -> str:
     if admin_key and token == admin_key:
         return "admin"
 
-    # Verify Supabase JWT
-    jwt_secret = os.getenv("SUPABASE_JWT_SECRET", "")
-    if not jwt_secret:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
+    # Verify using Supabase Auth API (works with ECC and legacy keys)
     try:
-        payload = jwt.decode(token, jwt_secret, algorithms=["HS256"], audience="authenticated")
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+        sb = get_supabase()
+        user_response = sb.auth.get_user(token)
+        if not user_response or not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        user_id = user_response.user.id
 
         # Check admin_users table
-        sb = get_supabase()
         result = sb.table("admin_users").select("id").eq("id", user_id).execute()
         if not result.data:
             raise HTTPException(status_code=403, detail="Not an admin")
 
         return user_id
-    except jwt.InvalidTokenError:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
