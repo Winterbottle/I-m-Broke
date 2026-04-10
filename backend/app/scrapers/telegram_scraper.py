@@ -7,13 +7,14 @@ Ethics:
 - Respects Telegram ToS: read-only access to public content
 """
 import os
+import re
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-from telethon.tl.types import Message
+from telethon.tl.types import Message, MessageMediaPhoto
 
 from app.ml.ner_pipeline import extract_deal_info
 from app.ml.classifier import is_spam
@@ -39,6 +40,29 @@ DEAL_KEYWORDS = [
     "% off", "sale", "offer", "cheap", "budget",
 ]
 
+URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
+
+# Map URL domains to source_type
+def _classify_source(url: str) -> str:
+    if not url:
+        return "web"
+    if "instagram.com" in url:
+        return "instagram"
+    if "t.me" in url or "telegram" in url:
+        return "telegram"
+    return "web"
+
+def _extract_source_url(text: str) -> Optional[str]:
+    """Extract the first non-Telegram URL from message text."""
+    urls = URL_RE.findall(text)
+    for url in urls:
+        # Skip Telegram links and tracking noise
+        if "t.me" in url or "telegram.me" in url:
+            continue
+        # Clean trailing punctuation
+        url = url.rstrip(".,;!?)")
+        return url
+    return None
 
 def _contains_deal_keywords(text: str) -> bool:
     text_lower = text.lower()
@@ -75,10 +99,37 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 forwards=getattr(msg, "forwards", 0) or 0,
             )
 
+            # Extract original source URL from message text
+            original_url = _extract_source_url(msg.text)
+            source_url = original_url or f"https://t.me/{channel}/{msg.id}"
+            source_type = _classify_source(original_url) if original_url else "web"
+
+            # Download photo if attached
+            image_url = None
+            if isinstance(msg.media, MessageMediaPhoto):
+                try:
+                    import io, base64
+                    buf = io.BytesIO()
+                    await client.download_media(msg.media, file=buf)
+                    buf.seek(0)
+                    # Upload to Supabase Storage
+                    sb = get_supabase()
+                    file_name = f"telegram/{channel}_{msg.id}.jpg"
+                    sb.storage.from_("deal-images").upload(
+                        file_name,
+                        buf.read(),
+                        {"content-type": "image/jpeg", "upsert": "true"},
+                    )
+                    supabase_url = os.getenv("SUPABASE_URL", "")
+                    image_url = f"{supabase_url}/storage/v1/object/public/deal-images/{file_name}"
+                except Exception as img_err:
+                    logger.debug(f"Image upload failed for {channel}/{msg.id}: {img_err}")
+
             deals.append({
                 **info,
-                "source_type": "telegram",
-                "source_url": f"https://t.me/{channel}/{msg.id}",
+                "source_type": source_type,
+                "source_url": source_url,
+                "image_url": image_url,
                 "raw_text": msg.text,
                 "quality_score": quality,
             })
@@ -142,24 +193,10 @@ def _upsert_deals(deals: list[dict]):
             "address": deal.get("address", ""),
             "image_url": deal.get("image_url"),
             "source_url": deal.get("source_url"),
-            "source_type": "telegram",
+            "source_type": deal.get("source_type", "web"),
             "raw_text": deal.get("raw_text", "")[:2000],
             "quality_score": deal.get("quality_score", 50),
             "is_active": True,
         }
 
         sb.table("deals").insert(payload).execute()
-
-
-def _geocode(address: str) -> Optional[tuple[float, float]]:
-    """Geocode an address to (lat, lng) using Nominatim (free, OSM-based)."""
-    try:
-        from geopy.geocoders import Nominatim
-        from geopy.exc import GeocoderTimedOut
-        geolocator = Nominatim(user_agent="im_broke_sg/1.0")
-        location = geolocator.geocode(f"{address}, Singapore", timeout=5)
-        if location:
-            return (location.latitude, location.longitude)
-    except Exception as e:
-        logger.debug(f"Geocode failed for '{address}': {e}")
-    return None
