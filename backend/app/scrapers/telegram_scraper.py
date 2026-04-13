@@ -33,12 +33,34 @@ PUBLIC_SG_CHANNELS = [
     "mothershipsg",
 ]
 
-# Keywords that indicate a deal
+# Keywords that indicate an actual deal/event (must have at least one)
 DEAL_KEYWORDS = [
-    "1-for-1", "1 for 1", "buy 1 get 1", "50% off", "discount",
-    "promo", "deal", "free", "student price", "student discount",
-    "flash sale", "limited time", "coupon", "voucher", "rebate",
-    "% off", "sale", "offer", "cheap", "budget",
+    "1-for-1", "1 for 1", "buy 1 get 1", "% off", "% discount",
+    "free entry", "free admission", "free flow", "free item",
+    "student price", "student discount", "student deal",
+    "flash sale", "limited time offer", "coupon", "voucher",
+    "promo code", "discount code", "redeem", "special price",
+    "$", "sgd", "nett", "++", "per pax", "per person",
+    "artbox", "pop-up", "popup", "bazaar", "fair", "festival",
+]
+
+# Skip posts that match these — news, ads, unrelated
+SKIP_PATTERNS = [
+    r"^\[ad\]",           # advertisements
+    r"^ad\b",
+    r"\bfollow\b.*\bchannel\b",
+    r"\bwon \$",          # news about winnings
+    r"\blegal battle\b",
+    r"\bcourt\b",
+    r"\bministry\b",
+    r"\bgovernment\b",
+    r"\bparliament\b",
+    r"\bmp \b",
+    r"\bpm \b",
+    r"\bprime minister\b",
+    r"\bin uncertain times\b",
+    r"\bmigrant worker\b",
+    r"\bscalp\b.*\btherapy\b",  # health/beauty ads
 ]
 
 URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
@@ -100,6 +122,10 @@ def _contains_deal_keywords(text: str) -> bool:
     text_lower = text.lower()
     return any(kw in text_lower for kw in DEAL_KEYWORDS)
 
+def _should_skip(text: str) -> bool:
+    text_lower = text.lower()
+    return any(re.search(p, text_lower) for p in SKIP_PATTERNS)
+
 
 async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 3) -> list[dict]:
     """Scrape a single public channel for deal messages."""
@@ -116,6 +142,8 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             if not msg.text:
                 continue
             if not _contains_deal_keywords(msg.text):
+                continue
+            if _should_skip(msg.text):
                 continue
             if is_spam(msg.text):
                 continue
