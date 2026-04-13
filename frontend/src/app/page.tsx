@@ -146,10 +146,10 @@ export default function HomePage() {
           <Link href="/map" className="text-sm text-primary font-semibold px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors min-h-[44px] flex items-center">Open full map →</Link>
         </div>
         <div className="block sm:hidden">
-          <MapView deals={featuredDeals} onDealClick={setSelectedDeal} height="150px" />
+          <MapView deals={allDeals} onDealClick={setSelectedDeal} height="150px" />
         </div>
         <div className="hidden sm:block">
-          <MapView deals={featuredDeals} onDealClick={setSelectedDeal} height="380px" />
+          <MapView deals={allDeals} onDealClick={setSelectedDeal} height="380px" />
         </div>
       </div>
 
