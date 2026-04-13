@@ -223,7 +223,7 @@ def _should_skip(text: str) -> bool:
     return any(re.search(p, text_lower) for p in SKIP_PATTERNS)
 
 
-async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 3) -> list[dict]:
+async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 7) -> list[dict]:
     """Scrape a single public channel for deal messages."""
     deals = []
     cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
@@ -351,4 +351,23 @@ def _upsert_deals(deals: list[dict]):
             "is_active": True,
         }
 
+        # Try to geocode address for map
+        if payload.get("address"):
+            coords = _geocode(payload["address"])
+            if coords:
+                payload["lat"] = coords[0]
+                payload["lng"] = coords[1]
+
         sb.table("deals").insert(payload).execute()
+
+
+def _geocode(address: str):
+    try:
+        from geopy.geocoders import Nominatim
+        geolocator = Nominatim(user_agent="im_broke_sg/1.0")
+        location = geolocator.geocode(f"{address}, Singapore", timeout=5)
+        if location:
+            return (location.latitude, location.longitude)
+    except Exception:
+        pass
+    return None

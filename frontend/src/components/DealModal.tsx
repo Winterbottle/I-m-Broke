@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { X, MapPin, Clock, ExternalLink, Star, BadgeCheck, Share2 } from 'lucide-react';
+import { X, MapPin, Clock, ExternalLink, BadgeCheck, Share2, Navigation } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Deal, CATEGORY_META } from '@/types';
 
@@ -136,7 +136,7 @@ export default function DealModal({ deal, onClose }: Props) {
 
           {/* Actions */}
           <div className="flex gap-3">
-            {deal.source_url && (
+            {deal.source_url && !deal.source_url.includes('t.me') && (
               <a
                 href={deal.source_url}
                 target="_blank"
@@ -144,6 +144,16 @@ export default function DealModal({ deal, onClose }: Props) {
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors"
               >
                 View Deal <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
+            {deal.location?.address && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(deal.location.address + ', Singapore')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
+              >
+                Directions <Navigation className="w-4 h-4" />
               </a>
             )}
             <button
