@@ -67,20 +67,33 @@ STORE_WEBSITES = {
 
 # Keywords that indicate an actual deal/event (must have at least one)
 DEAL_KEYWORDS = [
-    "1-for-1", "1 for 1", "buy 1 get 1", "% off", "% discount",
-    "free entry", "free admission", "free flow", "free item",
-    "student price", "student discount", "student deal",
-    "flash sale", "limited time offer", "coupon", "voucher",
-    "promo code", "discount code", "redeem", "special price",
+    # Price / discount signals
     "$", "sgd", "nett", "++", "per pax", "per person",
+    "% off", "% discount", "% rebate",
+    "1-for-1", "1 for 1", "buy 1 get 1", "bogo",
+    "half price", "half-price",
+    # Free stuff
+    "free", "foc", "complimentary", "on the house",
+    # Promotions
+    "promo", "promotion", "sale", "deal", "deals",
+    "discount", "offer", "offers", "special",
+    "flash sale", "flash deal", "limited time",
+    "coupon", "voucher", "redeem", "rebate",
+    "promo code", "discount code", "code:", "use code",
+    # Student / membership
+    "student price", "student discount", "student deal", "student rate",
+    # Events / markets
     "artbox", "pop-up", "popup", "bazaar", "fair", "festival",
+    "market", "flea", "open house",
+    # SG-specific
+    "1-for-1", "1for1", "1 for 1",
+    "grab deal", "foodpanda deal", "deliveroo deal",
 ]
 
 # Skip posts that match these — news, ads, unrelated
 SKIP_PATTERNS = [
     r"^\[ad\]",
-    r"^ad\b",
-    r"\bfollow\b.*\bchannel\b",
+    r"^sponsored\b",
     r"\bwon \$",
     r"\blegal battle\b",
     r"\bcourt\b",
@@ -90,6 +103,8 @@ SKIP_PATTERNS = [
     r"\bprime minister\b",
     r"\bin uncertain times\b",
     r"\bmigrant worker\b",
+    r"\bbreaking news\b",
+    r"\bpolice\b.*\barrest\b",
 ]
 
 URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
@@ -230,6 +245,12 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
 
     try:
         entity = await client.get_entity(channel)
+        seen = 0
+        skipped_keyword = 0
+        skipped_skip = 0
+        skipped_spam = 0
+        skipped_title = 0
+
         async for msg in client.iter_messages(entity, limit=200):
             if not isinstance(msg, Message):
                 continue
@@ -237,16 +258,21 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 break
             if not msg.text:
                 continue
+            seen += 1
             if not _contains_deal_keywords(msg.text):
+                skipped_keyword += 1
                 continue
             if _should_skip(msg.text):
+                skipped_skip += 1
                 continue
             if is_spam(msg.text):
+                skipped_spam += 1
                 continue
 
             # NER extraction
             info = extract_deal_info(msg.text)
             if not info.get("title"):
+                skipped_title += 1
                 continue
 
             # Clean title
@@ -287,8 +313,14 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 "quality_score": quality,
             })
 
+        logger.info(
+            f"[telegram] @{channel}: seen={seen}, "
+            f"no_keyword={skipped_keyword}, skip_pattern={skipped_skip}, "
+            f"spam={skipped_spam}, no_title={skipped_title}, kept={len(deals)}"
+        )
+
     except Exception as e:
-        logger.warning(f"Failed to scrape {channel}: {e}")
+        logger.warning(f"Failed to scrape {channel}: {e}", exc_info=True)
 
     return deals
 
