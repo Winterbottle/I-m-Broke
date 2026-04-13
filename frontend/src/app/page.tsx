@@ -47,7 +47,7 @@ export default function HomePage() {
     : featuredDeals;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-6">
 
       {/* ── Search ─────────────────────────────────────────────────────────────── */}
       <form onSubmit={handleSearch} className="flex items-center gap-2 bg-white rounded-xl border border-brand-border shadow-sm p-2 mb-6 max-w-2xl">
@@ -96,7 +96,7 @@ export default function HomePage() {
             ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Deals`
             : 'Latest Deals'}
         </h2>
-        <Link href="/deals" className="text-sm text-primary font-semibold hover:underline">
+        <Link href="/deals" className="text-sm text-primary font-semibold px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors min-h-[44px] flex items-center">
           View all →
         </Link>
       </div>
@@ -126,7 +126,7 @@ export default function HomePage() {
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Upcoming Events</h2>
-            <Link href="/events" className="text-sm text-primary font-semibold hover:underline">View all →</Link>
+            <Link href="/events" className="text-sm text-primary font-semibold px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors min-h-[44px] flex items-center">View all →</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {upcomingEvents.map((event) => (
@@ -149,9 +149,14 @@ export default function HomePage() {
       <div className="mt-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Deals Near You</h2>
-          <Link href="/map" className="text-sm text-primary font-semibold hover:underline">Open full map →</Link>
+          <Link href="/map" className="text-sm text-primary font-semibold px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors min-h-[44px] flex items-center">Open full map →</Link>
         </div>
-        <MapView deals={featuredDeals} onDealClick={setSelectedDeal} height="380px" />
+        <div className="block sm:hidden">
+          <MapView deals={featuredDeals} onDealClick={setSelectedDeal} height="150px" />
+        </div>
+        <div className="hidden sm:block">
+          <MapView deals={featuredDeals} onDealClick={setSelectedDeal} height="380px" />
+        </div>
       </div>
 
       <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
