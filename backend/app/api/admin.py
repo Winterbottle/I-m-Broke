@@ -105,9 +105,11 @@ async def trigger_web_scraper(user_id: str = Depends(require_admin)):
 @router.post("/scrape/telegram")
 async def trigger_telegram_scraper(user_id: str = Depends(require_admin)):
     try:
+        import asyncio
         from app.scrapers.telegram_scraper import run_telegram_scraper
-        await run_telegram_scraper()
-        return {"status": "ok", "message": "Telegram scraper completed"}
+        # Run in background so the HTTP request doesn't time out
+        asyncio.create_task(run_telegram_scraper())
+        return {"status": "ok", "message": "Telegram scraper started in background"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

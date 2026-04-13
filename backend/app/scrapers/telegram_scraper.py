@@ -223,14 +223,14 @@ def _should_skip(text: str) -> bool:
     return any(re.search(p, text_lower) for p in SKIP_PATTERNS)
 
 
-async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 7) -> list[dict]:
+async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 14) -> list[dict]:
     """Scrape a single public channel for deal messages."""
     deals = []
     cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
 
     try:
         entity = await client.get_entity(channel)
-        async for msg in client.iter_messages(entity, limit=100):
+        async for msg in client.iter_messages(entity, limit=200):
             if not isinstance(msg, Message):
                 continue
             if msg.date < cutoff:
@@ -271,8 +271,9 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             source_url = _extract_source_url(msg.text, store_name) or telegram_url
             source_type = _classify_source(source_url)
 
-            # Fetch og:image from the real source
-            image_url = _fetch_og_image(source_url)
+            # Fetch og:image only from real web sources (not Telegram — always fails)
+            is_telegram_url = "t.me" in source_url or "telegram" in source_url
+            image_url = _fetch_og_image(source_url) if not is_telegram_url else None
 
             deals.append({
                 **info,
@@ -351,14 +352,16 @@ def _upsert_deals(deals: list[dict]):
             "is_active": True,
         }
 
-        # Try to geocode address for map
+        # Try to geocode address for map pin (PostGIS POINT format)
         if payload.get("address"):
             coords = _geocode(payload["address"])
             if coords:
-                payload["lat"] = coords[0]
-                payload["lng"] = coords[1]
+                payload["lat_lng"] = f"POINT({coords[1]} {coords[0]})"
 
-        sb.table("deals").insert(payload).execute()
+        try:
+            sb.table("deals").insert(payload).execute()
+        except Exception as e:
+            logger.warning(f"Failed to insert deal '{payload.get('title', '')}': {e}")
 
 
 def _geocode(address: str):

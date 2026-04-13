@@ -15,11 +15,9 @@ logger = logging.getLogger(__name__)
 
 SPAM_PATTERNS = [
     r'\b(?:click here|join now|subscribe|forward this|share this)\b',
-    r'(?:http[s]?://\S+){3,}',          # Too many links
+    r'(?:http[s]?://\S+){5,}',          # Too many links (5+)
     r'\b(?:earn \$\d+|make money|work from home|passive income)\b',
     r'\b(?:mlm|network marketing|downline|upline)\b',
-    r'[\U0001F600-\U0001F64F]{5,}',     # Excessive emojis
-    r'(?:[!?]){3,}',                    # Excessive punctuation
     r'\b(?:guaranteed|100% legit|no risk)\b',
     r'\b(?:lottery|prize|winner|congratulations you won)\b',
 ]
