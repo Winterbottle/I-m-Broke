@@ -65,7 +65,7 @@ export default function AdminDealsPage() {
     if (!confirm(`Delete ${selected.size} deals?`)) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    await Promise.all([...selected].map((id) =>
+    await Promise.all(Array.from(selected).map((id) =>
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/deals/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session.access_token}` },
