@@ -133,14 +133,6 @@ export default function DealModal({ deal, onClose }: Props) {
             )}
           </div>
 
-          {/* Quality score */}
-          <div className="flex items-center gap-2 mb-5 p-3 bg-amber-50 rounded-xl">
-            <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
-            <div>
-              <p className="text-sm font-semibold">Deal Quality Score: {deal.quality_score}/100</p>
-              <p className="text-xs text-brand-muted">Based on engagement and AI analysis</p>
-            </div>
-          </div>
 
           {/* Actions */}
           <div className="flex gap-3">

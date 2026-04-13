@@ -43,6 +43,21 @@ DEAL_KEYWORDS = [
 
 URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
 
+def _clean_text(text: str) -> str:
+    """Remove Telegram markdown and clean up text for display."""
+    # Remove bold/italic markdown
+    text = re.sub(r'\*\*+', '', text)
+    text = re.sub(r'__', '', text)
+    # Remove arrow/bullet emojis used as list markers
+    text = re.sub(r'[➡️👉🔴🟢🟡⬛▪️•·→←↑↓▶️◀️]', '', text)
+    # Remove Telegram @mentions and bit.ly links in description
+    text = re.sub(r'@\w+', '', text)
+    text = re.sub(r'https?://\S+', '', text)
+    # Collapse multiple spaces/newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'[ \t]{2,}', ' ', text)
+    return text.strip()
+
 # Map URL domains to source_type
 def _classify_source(url: str) -> str:
     if not url:
@@ -109,6 +124,12 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             info = extract_deal_info(msg.text)
             if not info.get("title"):
                 continue
+
+            # Clean markdown formatting from title and description
+            if info.get("title"):
+                info["title"] = _clean_text(info["title"])
+            if info.get("description"):
+                info["description"] = _clean_text(info["description"])
 
             quality = compute_quality(
                 text=msg.text,
