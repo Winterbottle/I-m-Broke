@@ -32,6 +32,39 @@ PUBLIC_SG_CHANNELS = [
     "ThisCounted",
 ]
 
+# Known SG store official websites — used when no URL is in the post
+STORE_WEBSITES = {
+    "mr bean": "https://www.mrbean.com.sg",
+    "nando": "https://www.nandos.com.sg",
+    "nando's": "https://www.nandos.com.sg",
+    "sushiro": "https://www.sushiro.com.sg",
+    "koi": "https://www.koithe.com",
+    "playmade": "https://www.playmade.com.sg",
+    "gong cha": "https://gongcha.com.sg",
+    "gongcha": "https://gongcha.com.sg",
+    "tiger sugar": "https://www.tigersugar.com.sg",
+    "mcdonald": "https://www.mcdonalds.com.sg",
+    "kfc": "https://www.kfc.com.sg",
+    "subway": "https://www.subway.com/en-SG",
+    "starbucks": "https://www.starbucks.com.sg",
+    "toast box": "https://www.toastbox.com.sg",
+    "ya kun": "https://www.yakun.com",
+    "old chang kee": "https://www.oldchangkee.com",
+    "bengawan solo": "https://www.bengawansolo.com.sg",
+    "artbox": "https://www.artbox.sg",
+    "zalora": "https://www.zalora.sg",
+    "lazada": "https://www.lazada.sg",
+    "shopee": "https://shopee.sg",
+    "grab": "https://www.grab.com/sg",
+    "foodpanda": "https://www.foodpanda.sg",
+    "deliveroo": "https://deliveroo.com.sg",
+    "luckin": "https://luckincoffee.com.sg",
+    "luckin coffee": "https://luckincoffee.com.sg",
+    "hokkaido baked cheese tart": "https://www.baked.com.sg",
+    "paris baguette": "https://parisbaguette.com.sg",
+    "four leaves": "https://www.fourleaves.com.sg",
+}
+
 # Keywords that indicate an actual deal/event (must have at least one)
 DEAL_KEYWORDS = [
     "1-for-1", "1 for 1", "buy 1 get 1", "% off", "% discount",
@@ -45,25 +78,23 @@ DEAL_KEYWORDS = [
 
 # Skip posts that match these — news, ads, unrelated
 SKIP_PATTERNS = [
-    r"^\[ad\]",           # advertisements
+    r"^\[ad\]",
     r"^ad\b",
     r"\bfollow\b.*\bchannel\b",
-    r"\bwon \$",          # news about winnings
+    r"\bwon \$",
     r"\blegal battle\b",
     r"\bcourt\b",
     r"\bministry\b",
     r"\bgovernment\b",
     r"\bparliament\b",
-    r"\bmp \b",
-    r"\bpm \b",
     r"\bprime minister\b",
     r"\bin uncertain times\b",
     r"\bmigrant worker\b",
-    r"\bscalp\b.*\btherapy\b",  # health/beauty ads
 ]
 
 URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
 SHORTLINK_RE = re.compile(r'\b(bit\.ly|tinyurl\.com|t\.co|go\.gov\.sg|rb\.gy)/[\w\-]+')
+
 
 def _resolve_url(url: str) -> str:
     """Follow redirects to get the final URL."""
@@ -76,36 +107,42 @@ def _resolve_url(url: str) -> str:
     except Exception:
         return url
 
-def _clean_text(text: str) -> str:
-    """Remove Telegram markdown and clean up text for display."""
-    # Remove bold/italic markdown
-    text = re.sub(r'\*\*+', '', text)
-    text = re.sub(r'__', '', text)
-    # Remove all emoji characters
-    text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
-    text = re.sub(r'[^\x00-\x7F\u00C0-\u024F\u4E00-\u9FFF]+', ' ', text)
-    # Remove arrows and bullet symbols
-    text = re.sub(r'[➡→←↑↓▶◀▪•·]', '', text)
-    # Remove @mentions, URLs, bit.ly links
-    text = re.sub(r'@\w+', '', text)
-    text = re.sub(r'https?://\S+', '', text)
-    text = re.sub(r'\b(bit\.ly|tinyurl\.com|rb\.gy)/\S+', '', text)
-    # Remove "More info:" lines
-    text = re.sub(r'More info:.*', '', text, flags=re.IGNORECASE)
-    # Collapse whitespace
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    text = re.sub(r'[ \t]{2,}', ' ', text)
-    return text.strip()
 
-# Map URL domains to source_type
+def _extract_source_url(text: str, store_name: str = "") -> Optional[str]:
+    """Extract and resolve the first non-Telegram URL from message text.
+    Falls back to known store website if no URL found."""
+    # Try full URLs first
+    for url in URL_RE.findall(text):
+        if "t.me" in url or "telegram.me" in url:
+            continue
+        url = url.rstrip(".,;!?)")
+        resolved = _resolve_url(url)
+        # Skip if it resolved back to Telegram
+        if "t.me" in resolved or "telegram" in resolved:
+            continue
+        return resolved
+    # Fallback: shortlinks without protocol (e.g. bit.ly/xxx)
+    match = SHORTLINK_RE.search(text)
+    if match:
+        resolved = _resolve_url(match.group(0))
+        if "t.me" not in resolved:
+            return resolved
+    # Fallback: known store website
+    if store_name:
+        name_lower = store_name.lower()
+        for key, website in STORE_WEBSITES.items():
+            if key in name_lower:
+                return website
+    return None
+
+
 def _classify_source(url: str) -> str:
     if not url:
         return "web"
     if "instagram.com" in url:
         return "instagram"
-    if "t.me" in url or "telegram" in url:
-        return "telegram"
     return "web"
+
 
 def _fetch_og_image(url: str) -> Optional[str]:
     """Fetch the og:image from a URL."""
@@ -114,7 +151,6 @@ def _fetch_og_image(url: str) -> Optional[str]:
         res = requests.get(url, timeout=8, headers=headers, allow_redirects=True)
         if res.status_code != 200:
             return None
-        # Simple regex to find og:image without full HTML parser
         match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](https?://[^"\']+)["\']', res.text)
         if not match:
             match = re.search(r'<meta[^>]+content=["\'](https?://[^"\']+)["\'][^>]+property=["\']og:image["\']', res.text)
@@ -123,23 +159,64 @@ def _fetch_og_image(url: str) -> Optional[str]:
         return None
 
 
-def _extract_source_url(text: str) -> Optional[str]:
-    """Extract and resolve the first non-Telegram URL from message text."""
-    # Try full URLs first
-    for url in URL_RE.findall(text):
-        if "t.me" in url or "telegram.me" in url:
+def _build_description(text: str, store_name: str, discount_text: str) -> str:
+    """Build a clean, human-readable description from deal facts."""
+    # Strip markdown and emojis
+    clean = re.sub(r'\*\*+', '', text)
+    clean = re.sub(r'[\U00010000-\U0010ffff]', ' ', clean, flags=re.UNICODE)
+    clean = re.sub(r'@\w+', '', clean)
+    clean = re.sub(r'https?://\S+', '', clean)
+    clean = re.sub(r'\b(bit\.ly|tinyurl\.com|rb\.gy)/\S+', '', clean)
+    clean = re.sub(r'More info:.*', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'Find more.*', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r"Can't find a friend.*", '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'psst!.*', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\[.*?\]', '', clean)  # remove [Ad], [Pop-Ups] etc
+
+    # Extract date range (e.g. "Now - 30 Apr", "12 April only")
+    date_match = re.search(r'(now\s*[-–]\s*[\w\s]+\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b[\w\s]*|today only|\d+\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b[^\.]*)', clean, re.IGNORECASE)
+    validity = date_match.group(0).strip() if date_match else ""
+
+    # Extract location hints
+    loc_match = re.search(r'(?:all outlets|all\s+\w+\s+outlets|(?:at|@)\s+[A-Z][^\.]+)', clean)
+    location_hint = loc_match.group(0).strip() if loc_match else ""
+
+    # Extract items/details — lines with $ or descriptive content
+    item_lines = []
+    for line in clean.split('\n'):
+        line = line.strip()
+        if not line or len(line) < 5:
             continue
-        url = url.rstrip(".,;!?)")
-        return _resolve_url(url)
-    # Fallback: look for shortlinks without protocol (e.g. bit.ly/xxx)
-    match = SHORTLINK_RE.search(text)
-    if match:
-        return _resolve_url(match.group(0))
-    return None
+        if re.search(r'\$[\d]|nett|\+\+|per pax|incl\.|includes', line, re.IGNORECASE):
+            item_lines.append(line)
+
+    # Build the description
+    parts = []
+    if discount_text:
+        parts.append(f"{discount_text} deal at {store_name}.")
+    else:
+        parts.append(f"Special deal at {store_name}.")
+
+    if item_lines:
+        parts.append(" ".join(item_lines[:2]))  # first 2 relevant lines
+
+    if validity:
+        parts.append(f"Valid: {validity}.")
+
+    if location_hint:
+        parts.append(location_hint.capitalize() + ".")
+
+    result = " ".join(parts)
+    # Final cleanup
+    result = re.sub(r'[ \t]{2,}', ' ', result)
+    result = re.sub(r'\s([.,])', r'\1', result)
+    return result.strip()[:600]
+
 
 def _contains_deal_keywords(text: str) -> bool:
     text_lower = text.lower()
     return any(kw in text_lower for kw in DEAL_KEYWORDS)
+
 
 def _should_skip(text: str) -> bool:
     text_lower = text.lower()
@@ -172,11 +249,16 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             if not info.get("title"):
                 continue
 
-            # Clean markdown formatting from title and description
-            if info.get("title"):
-                info["title"] = _clean_text(info["title"])
-            if info.get("description"):
-                info["description"] = _clean_text(info["description"])
+            # Clean title
+            title = re.sub(r'\*\*+', '', info.get("title", ""))
+            title = re.sub(r'[\U00010000-\U0010ffff]', '', title, flags=re.UNICODE)
+            title = re.sub(r'\[.*?\]', '', title).strip()
+
+            store_name = info.get("store_name", "Unknown")
+            discount_text = info.get("discount_text", "")
+
+            # Build clean description
+            description = _build_description(msg.text, store_name, discount_text)
 
             quality = compute_quality(
                 text=msg.text,
@@ -184,18 +266,22 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 forwards=getattr(msg, "forwards", 0) or 0,
             )
 
-            # Extract original source URL from message text
-            original_url = _extract_source_url(msg.text)
-            source_url = original_url or f"https://t.me/{channel}/{msg.id}"
-            source_type = _classify_source(original_url) if original_url else "web"
+            # Extract original source URL (never Telegram)
+            source_url = _extract_source_url(msg.text, store_name)
+            if not source_url:
+                # Skip deals with no traceable source
+                logger.debug(f"Skipping deal with no source URL: {title[:50]}")
+                continue
 
-            # Fetch og:image from original source URL
-            image_url = None
-            if original_url:
-                image_url = _fetch_og_image(original_url)
+            source_type = _classify_source(source_url)
+
+            # Fetch og:image from the real source
+            image_url = _fetch_og_image(source_url)
 
             deals.append({
                 **info,
+                "title": title,
+                "description": description,
                 "source_type": source_type,
                 "source_url": source_url,
                 "image_url": image_url,
@@ -232,7 +318,7 @@ async def run_telegram_scraper():
             channel_deals = await scrape_channel(client, channel)
             all_deals.extend(channel_deals)
             logger.info(f"[telegram] {channel}: {len(channel_deals)} deals")
-            await asyncio.sleep(1)  # polite delay
+            await asyncio.sleep(1)
 
         if all_deals:
             _upsert_deals(all_deals)
@@ -242,7 +328,6 @@ async def run_telegram_scraper():
 def _upsert_deals(deals: list[dict]):
     sb = get_supabase()
     for deal in deals:
-        # Skip if we already have this source_url
         existing = (
             sb.table("deals")
             .select("id")
