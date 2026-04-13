@@ -13,6 +13,7 @@ export default function AdminDealsPage() {
   const [loading, setLoading] = useState(true);
   const [todayOnly, setTodayOnly] = useState(false);
   const [sourceFilter, setSourceFilter] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -42,6 +43,36 @@ export default function AdminDealsPage() {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     setDeals((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === deals.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(deals.map((d) => d.id)));
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (!confirm(`Delete ${selected.size} deals?`)) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await Promise.all([...selected].map((id) =>
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/deals/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+    ));
+    setDeals((prev) => prev.filter((d) => !selected.has(d.id)));
+    setSelected(new Set());
   };
 
   return (
@@ -74,6 +105,14 @@ export default function AdminDealsPage() {
           </button>
         ))}
         <span className="ml-auto text-sm text-brand-muted self-center">{deals.length} deals</span>
+        {selected.size > 0 && (
+          <button
+            onClick={deleteSelected}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Delete {selected.size}
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -87,6 +126,9 @@ export default function AdminDealsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-brand-border">
               <tr>
+                <th className="px-4 py-3 w-8">
+                  <input type="checkbox" checked={selected.size === deals.length && deals.length > 0} onChange={toggleSelectAll} className="w-4 h-4 accent-primary" />
+                </th>
                 <th className="text-left px-4 py-3 font-semibold text-brand-muted">Deal</th>
                 <th className="text-left px-4 py-3 font-semibold text-brand-muted">Source</th>
                 <th className="text-left px-4 py-3 font-semibold text-brand-muted">Category</th>
@@ -99,7 +141,10 @@ export default function AdminDealsPage() {
               {deals.map((deal) => {
                 const Icon = SOURCE_ICONS[deal.source_type] || Globe;
                 return (
-                  <tr key={deal.id} className="hover:bg-gray-50">
+                  <tr key={deal.id} className={`hover:bg-gray-50 ${selected.has(deal.id) ? 'bg-red-50' : ''}`}>
+                    <td className="px-4 py-3 w-8">
+                      <input type="checkbox" checked={selected.has(deal.id)} onChange={() => toggleSelect(deal.id)} className="w-4 h-4 accent-primary" />
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium line-clamp-1">{deal.title}</p>
                       <p className="text-xs text-brand-muted">{deal.store_name}</p>
