@@ -150,12 +150,22 @@ export default function AdminDealsPage() {
                       <p className="text-xs text-brand-muted">{deal.store_name}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <Icon className="w-3.5 h-3.5 text-brand-muted" />
-                        <span className="text-xs capitalize">{deal.source_name || deal.source_type}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Icon className="w-3.5 h-3.5 text-brand-muted flex-shrink-0" />
+                        <span className="text-xs capitalize">{deal.source_type}</span>
                         {deal.source_url && (
-                          <a href={deal.source_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                            <ExternalLink className="w-3 h-3 text-brand-muted hover:text-primary" />
+                          <a href={deal.source_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-primary hover:underline">
+                            <ExternalLink className="w-3 h-3 inline" /> site
+                          </a>
+                        )}
+                        {deal.source_name && deal.source_name.startsWith('@') && (
+                          <a
+                            href={`https://t.me/${deal.source_name.slice(1)}`}
+                            target="_blank" rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-blue-500 hover:underline"
+                          >
+                            <Send className="w-3 h-3 inline mr-0.5" />{deal.source_name}
                           </a>
                         )}
                       </div>

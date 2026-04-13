@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Zap } from 'lucide-react';
+import { Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import CategoryPills from '@/components/CategoryPills';
@@ -15,22 +15,20 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [featuredDeals, setFeaturedDeals] = useState<Deal[]>([]);
-  const [todayDeals, setTodayDeals] = useState<Deal[]>([]);
+  const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<DealCategory | undefined>();
+  const [todayOnly, setTodayOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       getDeals({ sort_by: 'quality', active_only: true }),
-      getDeals({ today_only: true, sort_by: 'recency', active_only: true }),
       getEvents(),
     ])
-      .then(([deals, today, events]) => {
-        setFeaturedDeals(deals.slice(0, 12));
-        setTodayDeals(today);
+      .then(([deals, events]) => {
+        setAllDeals(deals.slice(0, 48));
         setUpcomingEvents(events.slice(0, 3));
       })
       .catch(() => {})
@@ -42,9 +40,17 @@ export default function HomePage() {
     if (query.trim()) router.push(`/deals?q=${encodeURIComponent(query)}`);
   };
 
-  const filteredDeals = selectedCategory
-    ? featuredDeals.filter((d) => d.category === selectedCategory)
-    : featuredDeals;
+  const today = new Date();
+  const filteredDeals = allDeals.filter((d) => {
+    if (selectedCategory && d.category !== selectedCategory) return false;
+    if (todayOnly) {
+      const created = new Date(d.created_at);
+      return created.getFullYear() === today.getFullYear() &&
+        created.getMonth() === today.getMonth() &&
+        created.getDate() === today.getDate();
+    }
+    return true;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-6">
@@ -64,28 +70,16 @@ export default function HomePage() {
         </button>
       </form>
 
-      {/* ── Today's Deals ──────────────────────────────────────────────────────── */}
-      {todayDeals.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-primary" />
-            <h2 className="text-lg font-bold">Today&apos;s Deals</h2>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-primary">
-              {todayDeals.length} new
-            </span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {todayDeals.map((deal) => (
-              <div key={deal.id} className="flex-shrink-0 w-64">
-                <DealCard deal={deal} onClick={setSelectedDeal} compact={false} />
-              </div>
-            ))}
-          </div>
+      {/* ── Filters ─────────────────────────────────────────────────────────────── */}
+      <div className="mb-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTodayOnly(!todayOnly)}
+            className={`flex items-center gap-1.5 px-4 rounded-full text-sm font-semibold border min-h-[44px] transition-all ${todayOnly ? 'bg-primary text-white border-primary' : 'bg-white text-brand-muted border-brand-border'}`}
+          >
+            ⚡ Today
+          </button>
         </div>
-      )}
-
-      {/* ── Category filter ─────────────────────────────────────────────────────── */}
-      <div className="mb-5">
         <CategoryPills selected={selectedCategory} onChange={setSelectedCategory} />
       </div>
 
