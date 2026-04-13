@@ -266,13 +266,9 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 forwards=getattr(msg, "forwards", 0) or 0,
             )
 
-            # Extract original source URL (never Telegram)
-            source_url = _extract_source_url(msg.text, store_name)
-            if not source_url:
-                # Skip deals with no traceable source
-                logger.debug(f"Skipping deal with no source URL: {title[:50]}")
-                continue
-
+            # Extract original source URL — fall back to store website, then Telegram
+            telegram_url = f"https://t.me/{channel}/{msg.id}"
+            source_url = _extract_source_url(msg.text, store_name) or telegram_url
             source_type = _classify_source(source_url)
 
             # Fetch og:image from the real source

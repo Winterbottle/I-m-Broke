@@ -10,6 +10,13 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
   submitted: User,
 };
 
+const TELEGRAM_CHANNELS = [
+  { name: '@goodlobang', url: 'https://t.me/goodlobang' },
+  { name: '@tastesoulsg', url: 'https://t.me/tastesoulsg' },
+  { name: '@good2gosg', url: 'https://t.me/good2gosg' },
+  { name: '@ThisCounted', url: 'https://t.me/ThisCounted' },
+];
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -77,19 +84,40 @@ export default function AdminDashboardPage() {
             <StatCard icon={Zap} label="Today's Deals" value={stats.today_deals} color="text-orange-500" />
           </div>
 
-          <div className="bg-white rounded-xl border border-brand-border p-6">
-            <h2 className="font-bold mb-4">Deals by Source</h2>
-            <div className="space-y-3">
-              {Object.entries(stats.by_source || {}).map(([src, count]) => {
-                const Icon = SOURCE_ICONS[src] || Globe;
-                return (
-                  <div key={src} className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-brand-muted" />
-                    <span className="text-sm capitalize flex-1">{src}</span>
-                    <span className="text-sm font-bold">{count as number}</span>
-                  </div>
-                );
-              })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl border border-brand-border p-6">
+              <h2 className="font-bold mb-4">Deals by Source</h2>
+              <div className="space-y-3">
+                {Object.entries(stats.by_source || {}).map(([src, count]) => {
+                  const Icon = SOURCE_ICONS[src] || Globe;
+                  return (
+                    <div key={src} className="flex items-center gap-3">
+                      <Icon className="w-4 h-4 text-brand-muted" />
+                      <span className="text-sm capitalize flex-1">{src}</span>
+                      <span className="text-sm font-bold">{count as number}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-brand-border p-6">
+              <h2 className="font-bold mb-4">Telegram Channels</h2>
+              <div className="space-y-3">
+                {TELEGRAM_CHANNELS.map((ch) => (
+                  <a
+                    key={ch.name}
+                    href={ch.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Send className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-blue-600 flex-1">{ch.name}</span>
+                    <span className="text-xs text-brand-muted">→ view</span>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </>
