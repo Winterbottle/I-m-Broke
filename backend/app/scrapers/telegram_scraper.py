@@ -30,7 +30,6 @@ PUBLIC_SG_CHANNELS = [
     "tastesoulsg",
     "good2gosg",
     "ThisCounted",
-    "mothershipsg",
 ]
 
 # Keywords that indicate an actual deal/event (must have at least one)
@@ -64,18 +63,36 @@ SKIP_PATTERNS = [
 ]
 
 URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+')
+SHORTLINK_RE = re.compile(r'\b(bit\.ly|tinyurl\.com|t\.co|go\.gov\.sg|rb\.gy)/[\w\-]+')
+
+def _resolve_url(url: str) -> str:
+    """Follow redirects to get the final URL."""
+    try:
+        if not url.startswith("http"):
+            url = "https://" + url
+        res = requests.head(url, allow_redirects=True, timeout=8,
+                            headers={"User-Agent": "Mozilla/5.0"})
+        return res.url
+    except Exception:
+        return url
 
 def _clean_text(text: str) -> str:
     """Remove Telegram markdown and clean up text for display."""
     # Remove bold/italic markdown
     text = re.sub(r'\*\*+', '', text)
     text = re.sub(r'__', '', text)
-    # Remove arrow/bullet emojis used as list markers
-    text = re.sub(r'[➡️👉🔴🟢🟡⬛▪️•·→←↑↓▶️◀️]', '', text)
-    # Remove Telegram @mentions and bit.ly links in description
+    # Remove all emoji characters
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
+    text = re.sub(r'[^\x00-\x7F\u00C0-\u024F\u4E00-\u9FFF]+', ' ', text)
+    # Remove arrows and bullet symbols
+    text = re.sub(r'[➡→←↑↓▶◀▪•·]', '', text)
+    # Remove @mentions, URLs, bit.ly links
     text = re.sub(r'@\w+', '', text)
     text = re.sub(r'https?://\S+', '', text)
-    # Collapse multiple spaces/newlines
+    text = re.sub(r'\b(bit\.ly|tinyurl\.com|rb\.gy)/\S+', '', text)
+    # Remove "More info:" lines
+    text = re.sub(r'More info:.*', '', text, flags=re.IGNORECASE)
+    # Collapse whitespace
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r'[ \t]{2,}', ' ', text)
     return text.strip()
@@ -107,15 +124,17 @@ def _fetch_og_image(url: str) -> Optional[str]:
 
 
 def _extract_source_url(text: str) -> Optional[str]:
-    """Extract the first non-Telegram URL from message text."""
-    urls = URL_RE.findall(text)
-    for url in urls:
-        # Skip Telegram links and tracking noise
+    """Extract and resolve the first non-Telegram URL from message text."""
+    # Try full URLs first
+    for url in URL_RE.findall(text):
         if "t.me" in url or "telegram.me" in url:
             continue
-        # Clean trailing punctuation
         url = url.rstrip(".,;!?)")
-        return url
+        return _resolve_url(url)
+    # Fallback: look for shortlinks without protocol (e.g. bit.ly/xxx)
+    match = SHORTLINK_RE.search(text)
+    if match:
+        return _resolve_url(match.group(0))
     return None
 
 def _contains_deal_keywords(text: str) -> bool:
