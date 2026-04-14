@@ -108,15 +108,12 @@ export default function DealCard({ deal, onClick, compact = false }: Props) {
           )}
         </div>
 
-        {/* Store + title */}
-        <p className={clsx('text-brand-muted font-medium', compact ? 'text-xs' : 'text-xs mb-1')}>
-          {deal.store_name}
-          {deal.is_verified && (
-            <BadgeCheck className="inline w-3.5 h-3.5 ml-1 text-blue-500" />
-          )}
-        </p>
+        {/* Title */}
         <h3 className={clsx('font-bold leading-snug line-clamp-2', compact ? 'text-sm' : 'text-base mb-3')}>
           {deal.title}
+          {deal.is_verified && (
+            <BadgeCheck className="inline w-3.5 h-3.5 ml-1 text-blue-500 align-middle" />
+          )}
         </h3>
 
         {/* Meta row */}

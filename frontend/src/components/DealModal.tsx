@@ -87,14 +87,11 @@ export default function DealModal({ deal, onClose }: Props) {
             )}
           </div>
 
-          {/* Store name */}
-          <p className="text-sm text-brand-muted font-medium flex items-center gap-1">
-            {deal.store_name}
-            {deal.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500" />}
-          </p>
-
           {/* Title */}
-          <h2 className="text-xl font-bold mt-1 mb-3 leading-snug">{deal.title}</h2>
+          <h2 className="text-xl font-bold mt-1 mb-3 leading-snug">
+            {deal.title}
+            {deal.is_verified && <BadgeCheck className="inline w-5 h-5 ml-1.5 text-blue-500 align-middle" />}
+          </h2>
 
           {/* Description */}
           {deal.description && (

@@ -286,13 +286,26 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 skipped_title += 1
                 continue
 
-            # Clean title
-            title = re.sub(r'\*\*+', '', info.get("title", ""))
-            title = re.sub(r'[\U00010000-\U0010ffff]', '', title, flags=re.UNICODE)
-            title = re.sub(r'\[.*?\]', '', title).strip()
-
             store_name = info.get("store_name", "Unknown")
             discount_text = info.get("discount_text", "")
+
+            # Clean raw title
+            raw_title = re.sub(r'\*\*+', '', info.get("title", ""))
+            raw_title = re.sub(r'[\U00010000-\U0010ffff]', '', raw_title, flags=re.UNICODE)
+            raw_title = re.sub(r'\[.*?\]', '', raw_title).strip()
+            # Sentence-case it (Telegram posts are often all-caps)
+            raw_title = raw_title.capitalize() if raw_title.isupper() else raw_title
+
+            # Format as "Store Name — Deal" so store is always visible first
+            if store_name and store_name != "Unknown":
+                # Strip store name from title if it already starts with it
+                deal_part = re.sub(
+                    r'(?i)^' + re.escape(store_name) + r'[\s:–—\-]*', '', raw_title
+                ).strip()
+                deal_part = re.sub(r'^[\s:–—\-]+', '', deal_part).strip()
+                title = f"{store_name} — {deal_part[:120]}" if deal_part else store_name
+            else:
+                title = raw_title
 
             # Build clean description
             description = _build_description(msg.text, store_name, discount_text)

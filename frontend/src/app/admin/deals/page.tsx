@@ -147,7 +147,6 @@ export default function AdminDealsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium line-clamp-1">{deal.title}</p>
-                      <p className="text-xs text-brand-muted">{deal.store_name}</p>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
