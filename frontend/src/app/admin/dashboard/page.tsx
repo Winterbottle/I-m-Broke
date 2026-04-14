@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Tag, Zap, Globe, Send, User } from 'lucide-react';
+import { Tag, Zap, Globe, Send, User, Clock, RefreshCw } from 'lucide-react';
 
 const SOURCE_ICONS: Record<string, React.ElementType> = {
   telegram: Send,
@@ -20,40 +20,25 @@ const TELEGRAM_CHANNELS = [
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [scraping, setScraping] = useState(false);
-  const [scrapeMsg, setScrapeMsg] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/stats`,
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
-      );
-      if (res.ok) setStats(await res.json());
-      setLoading(false);
-    };
-    fetchStats();
-  }, []);
-
-  const runScraper = async () => {
-    setScraping(true);
-    setScrapeMsg('');
+  const fetchStats = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setScrapeMsg('Not authenticated'); setScraping(false); return; }
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/scrape/telegram`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (res.ok) {
-      setScrapeMsg('Scraper started! Check back in a minute.');
-    } else {
-      const err = await res.json().catch(() => ({}));
-      setScrapeMsg(`Failed: ${err.detail || res.status}`);
-    }
-    setScraping(false);
+    if (!session) return;
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/stats`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    );
+    if (res.ok) setStats(await res.json());
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchStats(); }, []);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    await fetchStats();
+    setRefreshing(false);
   };
 
   return (
@@ -61,14 +46,26 @@ export default function AdminDashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <button
-          onClick={runScraper}
-          disabled={scraping}
-          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark disabled:opacity-60"
+          onClick={refresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold disabled:opacity-60 transition-colors"
         >
-          {scraping ? 'Running...' : 'Run Telegram Scraper'}
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
-      {scrapeMsg && <p className="text-sm text-green-600 mb-4">{scrapeMsg}</p>}
+
+      {/* Scheduler info banner */}
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+        <Clock className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-blue-800">Scraper runs automatically</p>
+          <p className="text-xs text-blue-600 mt-0.5">
+            Telegram channels are scraped every <strong>2 hours</strong> — no action needed.
+            Expired deals are cleaned up hourly.
+          </p>
+        </div>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -103,6 +100,7 @@ export default function AdminDashboardPage() {
 
             <div className="bg-white rounded-xl border border-brand-border p-6">
               <h2 className="font-bold mb-4">Telegram Channels</h2>
+              <p className="text-xs text-brand-muted mb-3">Scraped every 2 hours automatically</p>
               <div className="space-y-3">
                 {TELEGRAM_CHANNELS.map((ch) => (
                   <a

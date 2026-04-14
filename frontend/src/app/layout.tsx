@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ApiWarmup from '@/components/ApiWarmup';
 
 export const metadata: Metadata = {
   title: "I'm Broke – Find Amazing Deals in Singapore",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <ApiWarmup />
         <Navbar />
         <main className="min-h-screen">{children}</main>
         <Footer />
