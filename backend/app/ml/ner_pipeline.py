@@ -134,17 +134,32 @@ def _classify_deal_type(text: str) -> str:
     return "public"
 
 
+# Common words that should never be a store name
+_STORE_NAME_BLOCKLIST = {
+    "buy", "get", "free", "new", "all", "the", "for", "with", "and", "from",
+    "just", "now", "only", "save", "use", "try", "see", "win", "top", "big",
+    "hot", "pop", "more", "tap", "via", "per", "off", "any", "one", "two",
+    "ntu", "nus", "smu", "sit", "sim", "valid", "limited", "special", "enjoy",
+    "check", "click", "find", "good", "great", "best", "deal", "promo", "sale",
+    "student", "today", "daily", "week", "month", "year", "time", "item",
+}
+
+
 def _extract_store_name(text: str, doc) -> str:
     """Try to extract store/brand name using NER ORG entities."""
     if doc is not None:
         orgs = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
+        # Filter out blocklisted words
+        orgs = [o for o in orgs if o.lower().strip() not in _STORE_NAME_BLOCKLIST and len(o) > 2]
         if orgs:
             return orgs[0][:200]
 
-    # Fallback: first capitalized word sequence
-    m = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b', text)
-    if m:
-        return m.group(1)[:200]
+    # Fallback: first capitalized word/phrase (Title Case), excluding blocklist
+    for m in re.finditer(r'\b([A-Z][a-zA-Z&\'\-]+(?:\s+[A-Z][a-zA-Z&\'\-]+){0,3})\b', text):
+        candidate = m.group(1).strip()
+        if candidate.lower() not in _STORE_NAME_BLOCKLIST and len(candidate) > 2:
+            return candidate[:200]
+
     return "Unknown"
 
 

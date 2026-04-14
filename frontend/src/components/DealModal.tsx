@@ -5,6 +5,45 @@ import { X, MapPin, Clock, ExternalLink, BadgeCheck, Share2, Navigation } from '
 import { formatDistanceToNow, format } from 'date-fns';
 import { Deal, CATEGORY_META } from '@/types';
 
+// Known SG store websites — mirrors the backend STORE_WEBSITES dict
+const STORE_WEBSITES: Record<string, string> = {
+  'mr bean': 'https://www.mrbean.com.sg',
+  'starbucks': 'https://www.starbucks.com.sg',
+  'coffee bean': 'https://www.coffeebean.com.sg',
+  'kfc': 'https://www.kfc.com.sg',
+  "mcdonald": 'https://www.mcdonalds.com.sg',
+  'subway': 'https://www.subway.com/en-SG',
+  'gong cha': 'https://gongcha.com.sg',
+  'koi': 'https://www.koithe.com',
+  'playmade': 'https://www.playmade.com.sg',
+  'tiger sugar': 'https://www.tigersugar.com.sg',
+  'sushiro': 'https://www.sushiro.com.sg',
+  'nando': 'https://www.nandos.com.sg',
+  'toast box': 'https://www.toastbox.com.sg',
+  'ya kun': 'https://www.yakun.com',
+  'old chang kee': 'https://www.oldchangkee.com',
+  'bengawan solo': 'https://www.bengawansolo.com.sg',
+  'zalora': 'https://www.zalora.sg',
+  'lazada': 'https://www.lazada.sg',
+  'shopee': 'https://shopee.sg',
+  'grab': 'https://www.grab.com/sg',
+  'foodpanda': 'https://www.foodpanda.sg',
+  'deliveroo': 'https://deliveroo.com.sg',
+  'luckin': 'https://luckincoffee.com.sg',
+  'paris baguette': 'https://parisbaguette.com.sg',
+  'four leaves': 'https://www.fourleaves.com.sg',
+};
+
+function getStoreWebsite(storeName: string, title: string): string | null {
+  const haystack = (storeName + ' ' + title).toLowerCase();
+  // Sort by length desc to match "luckin coffee" before "luckin"
+  const keys = Object.keys(STORE_WEBSITES).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (haystack.includes(key)) return STORE_WEBSITES[key];
+  }
+  return null;
+}
+
 interface Props {
   deal: Deal | null;
   onClose: () => void;
@@ -133,16 +172,23 @@ export default function DealModal({ deal, onClose }: Props) {
 
           {/* Actions */}
           <div className="flex gap-3">
-            {deal.source_url && !deal.source_url.includes('t.me') && (
-              <a
-                href={deal.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors"
-              >
-                View Deal <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
+            {(() => {
+              const isTelegram = !deal.source_url || deal.source_url.includes('t.me');
+              const href = isTelegram
+                ? getStoreWebsite(deal.store_name, deal.title)
+                : deal.source_url;
+              if (!href) return null;
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors"
+                >
+                  View Deal <ExternalLink className="w-4 h-4" />
+                </a>
+              );
+            })()}
             {deal.location?.address && (
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(deal.location.address + ', Singapore')}`}

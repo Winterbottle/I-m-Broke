@@ -162,6 +162,17 @@ def _store_website(store_name: str) -> Optional[str]:
     return None
 
 
+def _identify_known_store(text: str) -> Optional[str]:
+    """Scan the message for any known brand name and return the canonical name."""
+    text_lower = text.lower()
+    # Sorted by length descending so "luckin coffee" matches before "luckin"
+    for key in sorted(STORE_WEBSITES.keys(), key=len, reverse=True):
+        if key in text_lower:
+            # Return title-cased version of the key
+            return key.title()
+    return None
+
+
 def _classify_source(url: str) -> str:
     if not url:
         return "web"
@@ -286,8 +297,10 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
                 skipped_title += 1
                 continue
 
-            store_name = info.get("store_name", "Unknown")
             discount_text = info.get("discount_text", "")
+
+            # Try to identify store from known brands first (more reliable than NER)
+            store_name = _identify_known_store(msg.text) or info.get("store_name", "Unknown")
 
             # Clean raw title
             raw_title = re.sub(r'\*\*+', '', info.get("title", ""))
