@@ -151,6 +151,17 @@ def _extract_source_url(text: str, store_name: str = "") -> Optional[str]:
     return None
 
 
+def _store_website(store_name: str) -> Optional[str]:
+    """Return the official website for a known store, for image fallback."""
+    if not store_name:
+        return None
+    name_lower = store_name.lower()
+    for key, website in STORE_WEBSITES.items():
+        if key in name_lower or name_lower in key:
+            return website
+    return None
+
+
 def _classify_source(url: str) -> str:
     if not url:
         return "web"
@@ -297,9 +308,17 @@ async def scrape_channel(client: TelegramClient, channel: str, days_back: int = 
             source_url = _extract_source_url(msg.text, store_name) or telegram_url
             source_type = _classify_source(source_url)
 
-            # Fetch og:image only from real web sources (not Telegram — always fails)
+            # Fetch og:image — try real source first, then fall back to store website
             is_telegram_url = "t.me" in source_url or "telegram" in source_url
-            image_url = _fetch_og_image(source_url) if not is_telegram_url else None
+            if not is_telegram_url:
+                image_url = _fetch_og_image(source_url)
+            else:
+                image_url = None
+            # If no image yet, try the store's official website
+            if not image_url:
+                store_site = _store_website(store_name)
+                if store_site:
+                    image_url = _fetch_og_image(store_site)
 
             deals.append({
                 **info,
@@ -355,16 +374,37 @@ async def run_telegram_scraper():
             logger.info(f"[telegram] upserted {len(all_deals)} deals total")
 
 
+def _title_key(title: str) -> str:
+    """Normalize a title for dedup comparison — lowercase, strip punctuation, first 60 chars."""
+    import re as _re
+    t = title.lower().strip()
+    t = _re.sub(r'[^\w\s]', '', t)
+    t = _re.sub(r'\s+', ' ', t)
+    return t[:60]
+
+
 def _upsert_deals(deals: list[dict]):
     sb = get_supabase()
+
+    # Build a local set of (store_name_lower, title_key) already in DB to avoid dupes
+    existing_rows = sb.table("deals").select("store_name, title").execute().data or []
+    existing_keys = {
+        (_title_key(r.get("store_name", "")), _title_key(r.get("title", "")))
+        for r in existing_rows
+    }
+
     for deal in deals:
-        existing = (
-            sb.table("deals")
-            .select("id")
-            .eq("source_url", deal.get("source_url", ""))
-            .execute()
-        )
-        if existing.data:
+        # Check by source_url first (fast exact match)
+        src_url = deal.get("source_url", "")
+        if src_url:
+            by_url = sb.table("deals").select("id").eq("source_url", src_url).execute()
+            if by_url.data:
+                continue
+
+        # Also check by store+title to catch cross-source dupes
+        store_key = _title_key(deal.get("store_name", ""))
+        title_key = _title_key(deal.get("title", ""))
+        if (store_key, title_key) in existing_keys:
             continue
 
         payload = {
@@ -392,6 +432,7 @@ def _upsert_deals(deals: list[dict]):
 
         try:
             sb.table("deals").insert(payload).execute()
+            existing_keys.add((store_key, title_key))
         except Exception as e:
             logger.warning(f"Failed to insert deal '{payload.get('title', '')}': {e}")
 

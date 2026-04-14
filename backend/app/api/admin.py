@@ -182,6 +182,39 @@ async def admin_delete_deal(deal_id: str, user_id: str = Depends(require_admin))
     return {"status": "ok"}
 
 
+@router.post("/deduplicate")
+async def deduplicate_deals(user_id: str = Depends(require_admin)):
+    """Remove duplicate deals — keeps the one with the best image/quality, deletes the rest."""
+    import re as _re
+
+    def _key(title: str, store: str) -> str:
+        t = (store + " " + title).lower()
+        t = _re.sub(r'[^\w\s]', '', t)
+        t = _re.sub(r'\s+', ' ', t).strip()
+        return t[:80]
+
+    sb = get_supabase()
+    rows = sb.table("deals").select("id, title, store_name, image_url, quality_score").execute().data or []
+
+    groups: dict[str, list[dict]] = {}
+    for row in rows:
+        k = _key(row.get("title", ""), row.get("store_name", ""))
+        groups.setdefault(k, []).append(row)
+
+    deleted = 0
+    for key, dupes in groups.items():
+        if len(dupes) <= 1:
+            continue
+        # Keep the one with an image, then highest quality_score
+        dupes.sort(key=lambda r: (1 if r.get("image_url") else 0, r.get("quality_score", 0)), reverse=True)
+        to_delete = [r["id"] for r in dupes[1:]]
+        for deal_id in to_delete:
+            sb.table("deals").delete().eq("id", deal_id).execute()
+            deleted += 1
+
+    return {"deleted": deleted, "message": f"Removed {deleted} duplicate deals"}
+
+
 @router.get("/stats")
 async def admin_stats(user_id: str = Depends(require_admin)):
     sb = get_supabase()

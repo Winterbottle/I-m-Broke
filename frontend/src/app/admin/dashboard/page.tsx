@@ -21,6 +21,8 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [dedupeMsg, setDedupeMsg] = useState('');
 
   const fetchStats = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -41,19 +43,44 @@ export default function AdminDashboardPage() {
     setRefreshing(false);
   };
 
+  const deduplicate = async () => {
+    setDeduping(true);
+    setDedupeMsg('');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setDeduping(false); return; }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/deduplicate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    setDedupeMsg(data.message || 'Done');
+    setDeduping(false);
+    fetchStats();
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <button
-          onClick={refresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold disabled:opacity-60 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={deduplicate}
+            disabled={deduping}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-semibold disabled:opacity-60 transition-colors"
+          >
+            {deduping ? 'Removing...' : 'Remove Duplicates'}
+          </button>
+          <button
+            onClick={refresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold disabled:opacity-60 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+      {dedupeMsg && <p className="text-sm text-green-600 mb-4">{dedupeMsg}</p>}
 
       {/* Scheduler info banner */}
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
